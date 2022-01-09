@@ -71,6 +71,7 @@ fn hit_list<T>(ray: &Ray, hittables: impl Iterator<Item = T>, t_min: f64, t_max:
     let mut t_max = t_max;
     for hittable in hittables {
         if let Some(result) = hittable.hit(ray, t_min, t_max) {
+            t_max = result.t;
             hit_record = Some(result);
         }
     }
