@@ -1,5 +1,6 @@
 use image::{RgbImage};
 use indicatif::ProgressBar;
+use rand::prelude::*;
 
 mod vec3;
 mod ray;
@@ -69,14 +70,23 @@ fn main() -> GenericResult<()> {
 
     let mut img = RgbImage::new(image_width, image_height);
     let progress = ProgressBar::new(img.height().into());
+    let samples_per_pixel = 100;
+
+    let mut rng = thread_rng();
     for y in 0..img.height() {
         progress.inc(1);
         for x in 0..img.width() {
-            let ray = camera.get_ray(x as f64 / img.width() as f64, y as f64 / img.height() as f64);
-            img.put_pixel(x, img.height() - y - 1, ray_color(&ray, &world).into());
+            let mut color = Color::new(0.0, 0.0, 0.0);
+            for i in 0..samples_per_pixel {
+                let u = (x as f64 + rng.gen::<f64>()) / img.width() as f64;
+                let v = (y as f64 + rng.gen::<f64>()) / img.height() as f64;
+                let ray = camera.get_ray(u, v);
+                color += ray_color(&ray, &world);
+            }
+            img.put_pixel(x, img.height() - y - 1, (color / samples_per_pixel as f64).into());
         }
     }
-    img.save("foo.jpg")?;
+    img.save("foo.png")?;
     Ok(())
 }
 
