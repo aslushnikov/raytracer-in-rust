@@ -4,69 +4,18 @@ use indicatif::ProgressBar;
 mod vec3;
 mod ray;
 mod color;
+mod hittable;
+mod shapes;
 
 use self::vec3::*;
 use self::color::*;
 use self::ray::*;
-
+use self::hittable::*;
+use self::shapes::*;
 
 type GenericResult<T> = Result<T, Box<dyn std::error::Error>>;
 
-struct HitRecord {
-    p: Point3,
-    normal: Vec3,
-    t: f64,
-    front_face: bool,
-}
-
-impl HitRecord {
-    fn new(ray: &Ray, p: Point3, t: f64, normal: Vec3) -> HitRecord {
-        let front_face = vec3::dot(ray.direction, normal) < 0.0;
-        let normal = if !front_face { normal * -1.0 } else { normal };
-        HitRecord {
-            p,
-            t,
-            normal,
-            front_face
-        }
-    }
-}
-
-trait Hittable {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
-}
-
-struct Sphere {
-    center: Point3,
-    radius: f64,
-}
-
-impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
-        let oc = ray.origin - self.center;
-        let a = ray.direction.len_squared();
-        let half_b = vec3::dot(oc, ray.direction);
-        let c = oc.len_squared() - self.radius * self.radius;
-        let discriminant = half_b * half_b - a * c;
-        if (discriminant < 0.0) {
-            return None;
-        }
-        let sqrtd = discriminant.sqrt();
-        let mut root = (-half_b - sqrtd) / a;
-        if root < t_min || root > t_max {
-            root = (-half_b + sqrtd) / a;
-            if root < t_min || root > t_max {
-                return None;
-            }
-        }
-        let p = ray.at(root);
-        let normal = (p - self.center) / self.radius;
-        Some(HitRecord::new(ray, p, root, normal))
-    }
-}
-
-fn hit_list<T>(ray: &Ray, hittables: impl Iterator<Item = T>, t_min: f64, t_max: f64) -> Option<HitRecord>
-    where T: Hittable {
+pub fn hit_list<'a, T: 'a + Hittable>(ray: &Ray, hittables: impl Iterator<Item = &'a T>, t_min: f64, t_max: f64) -> Option<HitRecord> {
     let mut hit_record = None;
     let mut t_max = t_max;
     for hittable in hittables {
@@ -78,12 +27,8 @@ fn hit_list<T>(ray: &Ray, hittables: impl Iterator<Item = T>, t_min: f64, t_max:
     hit_record
 }
 
-fn ray_color(ray: &Ray) -> Color {
-    let s = Sphere {
-        center: Point3::new(0.0, 0.0, -1.0),
-        radius: 0.5,
-    };
-    match s.hit(ray, 0.0, 100.0) {
+fn ray_color<T: Hittable>(ray: &Ray, world: &Vec<T>) -> Color {
+    match hit_list(ray, world.iter(), 0.0, 100.0) {
         None => {
             let unit_direction = vec3::unit_vector(ray.direction);
             let t = 0.5 * (unit_direction.y + 1.0);
@@ -100,6 +45,18 @@ fn main() -> GenericResult<()> {
     let aspect_ratio = 16.0 / 9.0;
     let image_width: u32 = 400;
     let image_height: u32 = (image_width as f64 / aspect_ratio) as u32;
+
+    // World
+    let world = vec![
+        Sphere {
+            center: Point3::new(0.0, 0.0, -1.0),
+            radius: 0.5,
+        },
+        Sphere {
+            center: Point3::new(0.0, -100.5, -1.0),
+            radius: 100.0,
+        },
+    ];
 
     // Camera
     let viewport_height = 2.0;
@@ -124,7 +81,7 @@ fn main() -> GenericResult<()> {
                 origin,
                 direction: lower_left_corner + vertical * y as f64 / img.height() as f64 + horizontal * x as f64 / img.width() as f64,
             };
-            img.put_pixel(x, img.height() - y - 1, ray_color(&ray).into());
+            img.put_pixel(x, img.height() - y - 1, ray_color(&ray, &world).into());
         }
     }
     img.save("foo.jpg")?;
