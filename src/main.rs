@@ -6,12 +6,14 @@ mod ray;
 mod color;
 mod hittable;
 mod shapes;
+mod camera;
 
 use self::vec3::*;
 use self::color::*;
 use self::ray::*;
 use self::hittable::*;
 use self::shapes::*;
+use self::camera::*;
 
 type GenericResult<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -59,14 +61,7 @@ fn main() -> GenericResult<()> {
     ];
 
     // Camera
-    let viewport_height = 2.0;
-    let viewport_width = aspect_ratio * viewport_height;
-    let focal_length = 1.0;
-
-    let origin = Point3::new(0.0, 0.0, 0.0);
-    let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
-    let vertical = Vec3::new(0.0, viewport_height, 0.0);
-    let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0- Vec3::new(0.0, 0.0, focal_length);
+    let camera = Camera::new(aspect_ratio);
 
     // Render
     dbg!(image_width);
@@ -77,10 +72,7 @@ fn main() -> GenericResult<()> {
     for y in 0..img.height() {
         progress.inc(1);
         for x in 0..img.width() {
-            let ray = Ray {
-                origin,
-                direction: lower_left_corner + vertical * y as f64 / img.height() as f64 + horizontal * x as f64 / img.width() as f64,
-            };
+            let ray = camera.get_ray(x as f64 / img.width() as f64, y as f64 / img.height() as f64);
             img.put_pixel(x, img.height() - y - 1, ray_color(&ray, &world).into());
         }
     }
