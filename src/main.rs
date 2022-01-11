@@ -1,4 +1,4 @@
-use image::{RgbImage, Rgb};
+use image::{RgbImage};
 use indicatif::ProgressBar;
 
 mod vec3;

@@ -1,4 +1,4 @@
-use crate::vec3::{self,*};
+use super::vec3::{self,*};
 use super::ray::*;
 use super::hittable::*;
 
@@ -14,7 +14,7 @@ impl Hittable for Sphere {
         let half_b = vec3::dot(oc, ray.direction);
         let c = oc.len_squared() - self.radius * self.radius;
         let discriminant = half_b * half_b - a * c;
-        if (discriminant < 0.0) {
+        if discriminant < 0.0 {
             return None;
         }
         let sqrtd = discriminant.sqrt();

@@ -1,5 +1,5 @@
 mod ops;
-use self::ops::*;
+
 
 #[derive(Debug,Clone,Copy,PartialEq)]
 pub struct Vec3 {
@@ -20,7 +20,7 @@ impl Vec3 {
     }
 
     pub fn len_squared(&self) -> f64 {
-        (self.x * self.x + self.y * self.y + self.z * self.z)
+        self.x * self.x + self.y * self.y + self.z * self.z
     }
 }
 
