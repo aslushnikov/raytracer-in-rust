@@ -1,6 +1,7 @@
 use image::{RgbImage};
 use indicatif::ProgressBar;
 use rand::prelude::*;
+use rayon::prelude::*;
 
 mod vec3;
 mod ray;
@@ -17,6 +18,8 @@ use self::shapes::*;
 use self::camera::*;
 
 type GenericResult<T> = Result<T, Box<dyn std::error::Error>>;
+const SAMPLES_PER_PIXEL: u32 = 10;
+const MAX_RAY_REFLECTION: usize = 10;
 
 pub fn hit_list<'a, T: 'a + Hittable>(ray: &Ray, hittables: impl Iterator<Item = &'a T>, t_min: f64, t_max: f64) -> Option<HitRecord> {
     let mut hit_record = None;
@@ -30,15 +33,47 @@ pub fn hit_list<'a, T: 'a + Hittable>(ray: &Ray, hittables: impl Iterator<Item =
     hit_record
 }
 
-fn ray_color<T: Hittable>(ray: &Ray, world: &Vec<T>) -> Color {
-    match hit_list(ray, world.iter(), 0.0, 100.0) {
+fn random_in_hemisphere(normal: &Vec3) -> Vec3 {
+    let v = random_unit_vector();
+
+    if vec3::dot(&v, normal) > 0.0 {
+        v
+    } else {
+        v * -1.0
+    }
+}
+
+fn random_unit_vector() -> Vec3 {
+    vec3::unit_vector(random_in_unit_sphere())
+}
+
+fn random_in_unit_sphere() -> Vec3 {
+    let mut rng = rand::thread_rng();
+    loop {
+        let x = Vec3::new(rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0), rng.gen_range(-1.0..1.0));
+        if x.len_squared() < 1.0 {
+            return x;
+        }
+    }
+}
+
+fn ray_color<T: Hittable>(ray: &Ray, world: &Vec<T>, depth: usize) -> Color {
+    if depth <= 0 {
+        return Color::new(0.0, 0.0, 0.0);
+    }
+    match hit_list(ray, world.iter(), 0.001, 100.0) {
         None => {
             let unit_direction = vec3::unit_vector(ray.direction);
             let t = 0.5 * (unit_direction.y + 1.0);
             (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
         },
         Some(hit_record) => {
-            return 0.5 * Color::new(hit_record.normal.x + 1.0, hit_record.normal.y + 1.0, hit_record.normal.z + 1.0);
+            let target = hit_record.p + hit_record.normal + random_in_hemisphere(&hit_record.normal);
+            let child_ray = Ray {
+                origin: hit_record.p,
+                direction: target - hit_record.p,
+            };
+            return 0.5 * ray_color::<T>(&child_ray, world, depth - 1);
         }
     }
 }
@@ -69,32 +104,25 @@ fn main() -> GenericResult<()> {
     dbg!(image_height);
 
     let mut img = RgbImage::new(image_width, image_height);
-    let progress = ProgressBar::new(img.height().into());
-    let samples_per_pixel = 100;
+    let progress = ProgressBar::new((img.height() * img.width()).into());
 
-    let mut rng = thread_rng();
-    for y in 0..img.height() {
+    let result = (0..(img.height() * img.width())).into_par_iter().map(|idx| {
+        let y = idx / img.width();
+        let x = idx % img.width();
         progress.inc(1);
-        for x in 0..img.width() {
-            let mut color = Color::new(0.0, 0.0, 0.0);
-            for i in 0..samples_per_pixel {
-                let u = (x as f64 + rng.gen::<f64>()) / img.width() as f64;
-                let v = (y as f64 + rng.gen::<f64>()) / img.height() as f64;
-                let ray = camera.get_ray(u, v);
-                color += ray_color(&ray, &world);
-            }
-            img.put_pixel(x, img.height() - y - 1, (color / samples_per_pixel as f64).into());
+        let mut color = Color::new(0.0, 0.0, 0.0);
+        for _ in 0..SAMPLES_PER_PIXEL {
+            let u = (x as f64 + rand::random::<f64>()) / img.width() as f64;
+            let v = (y as f64 + rand::random::<f64>()) / img.height() as f64;
+            let ray = camera.get_ray(u, v);
+            color += ray_color(&ray, &world, MAX_RAY_REFLECTION);
         }
-    }
+        (x, img.height() - y - 1, (color / SAMPLES_PER_PIXEL as f64).into())
+    }).collect::<Vec<(u32, u32, image::Rgb<u8>)>>();
+    for (x, y, color) in result {
+        img.put_pixel(x, y, color);
+    };
     img.save("foo.png")?;
     Ok(())
 }
 
-#[test]
-fn test_dot() {
-    let a = Vec3::new(10f64, 10f64, 10f64);
-    let b = Vec3::new(12f64, 12f64, 12f64);
-    dbg!(a.len());
-    dbg!(vec3::dot(a, b));
-    dbg!(a + b);
-}
