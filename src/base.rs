@@ -24,17 +24,17 @@ impl Ray {
     }
 }
 
-pub trait Geometry {
+pub trait Geometry: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
 }
 
-pub trait Material {
+pub trait Material: Send + Sync {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)>;
 }
 
-pub struct Object<G: Geometry, M: Material> {
-    pub geometry: G,
-    pub material: M,
+pub struct Object {
+    pub geometry: Box<dyn Geometry>,
+    pub material: Box<dyn Material>,
 }
 
 pub struct HitRecord {

@@ -16,7 +16,7 @@ type GenericResult<T> = Result<T, Box<dyn std::error::Error>>;
 const SAMPLES_PER_PIXEL: u32 = 10;
 const MAX_RAY_REFLECTION: usize = 10;
 
-pub fn hit_list<'a, G: 'a + Geometry, M: 'a + Material>(ray: &Ray, objects: impl Iterator<Item = &'a Object<G, M>>, t_min: f64, t_max: f64) -> Option<(&'a Object<G, M>, HitRecord)> {
+pub fn hit_list<'a>(ray: &Ray, objects: impl Iterator<Item = &'a Object>, t_min: f64, t_max: f64) -> Option<(&'a Object, HitRecord)> {
     let mut hit_record = None;
     let mut t_max = t_max;
     for object in objects {
@@ -28,7 +28,7 @@ pub fn hit_list<'a, G: 'a + Geometry, M: 'a + Material>(ray: &Ray, objects: impl
     hit_record
 }
 
-fn ray_color<G: Geometry, M: Material>(ray: &Ray, world: &Vec<Object<G, M>>, depth: usize) -> Color {
+fn ray_color(ray: &Ray, world: &Vec<Object>, depth: usize) -> Color {
     if depth <= 0 {
         return Color::new(0.0, 0.0, 0.0);
     }
@@ -40,7 +40,7 @@ fn ray_color<G: Geometry, M: Material>(ray: &Ray, world: &Vec<Object<G, M>>, dep
         },
         Some((object, hit_record)) => {
             if let Some((child_ray, attenuation)) = object.material.scatter(&ray, &hit_record) {
-                return vec3::hadamard(&attenuation, &ray_color::<G, M>(&child_ray, world, depth - 1));
+                return vec3::hadamard(&attenuation, &ray_color(&child_ray, world, depth - 1));
             }
             return Color::new(0.0, 0.0, 0.0);
         }
@@ -54,38 +54,38 @@ fn main() -> GenericResult<()> {
     let image_height: u32 = (image_width as f64 / aspect_ratio) as u32;
 
     // World
-    let material_ground = MetalMaterial { albedo: Color::new(0.8, 0.8, 0.0) };
-    let material_center = MetalMaterial { albedo: Color::new(0.7, 0.3, 0.3) };
-    let material_left = MetalMaterial { albedo: Color::new(0.8, 0.8, 0.8) };
-    let material_right = MetalMaterial { albedo: Color::new(0.8, 0.6, 0.2) };
+    let material_ground = Box::new(LambertianMaterial { albedo: Color::new(0.8, 0.8, 0.0) });
+    let material_center = Box::new(LambertianMaterial { albedo: Color::new(0.7, 0.3, 0.3) });
+    let material_left = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.8, 0.8) });
+    let material_right = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.6, 0.2) });
 
     let world = vec![
         Object {
-            geometry: Sphere {
+            geometry: Box::new(Sphere {
                 center: Point3::new(0.0, -100.5, -1.0),
                 radius: 100.0,
-            },
+            }),
             material: material_ground,
         },
         Object {
-            geometry: Sphere {
+            geometry: Box::new(Sphere {
                 center: Point3::new(0.0, 0.0, -1.0),
                 radius: 0.5,
-            },
+            }),
             material: material_center,
         },
         Object {
-            geometry: Sphere {
+            geometry: Box::new(Sphere {
                 center: Point3::new(-1.0, 0.0, -1.0),
                 radius: 0.5,
-            },
+            }),
             material: material_left,
         },
         Object {
-            geometry: Sphere {
+            geometry: Box::new(Sphere {
                 center: Point3::new(1.0, 0.0, -1.0),
                 radius: 0.5,
-            },
+            }),
             material: material_right,
         },
     ];
