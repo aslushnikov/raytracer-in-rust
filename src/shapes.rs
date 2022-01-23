@@ -47,12 +47,14 @@ impl Material for LambertianMaterial {
 
 pub struct MetalMaterial {
     pub albedo: Color,
+    pub fuzz: f64,
 }
 
 impl Material for MetalMaterial {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
         //TODO probably no need to do unit_vector anywhere here.
-        let direction = unit_vector(ray.direction) - 2.0 * vec3::dot(&hit_record.normal, &unit_vector(ray.direction)) * hit_record.normal;
+        let direction = unit_vector(ray.direction) - 2.0 * vec3::dot(&hit_record.normal, &unit_vector(ray.direction)) * hit_record.normal
+                + random_in_unit_sphere() * self.fuzz;
         if vec3::dot(&direction, &hit_record.normal) <= 0.0 {
             return None
         }

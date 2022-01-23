@@ -56,8 +56,8 @@ fn main() -> GenericResult<()> {
     // World
     let material_ground = Box::new(LambertianMaterial { albedo: Color::new(0.8, 0.8, 0.0) });
     let material_center = Box::new(LambertianMaterial { albedo: Color::new(0.7, 0.3, 0.3) });
-    let material_left = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.8, 0.8) });
-    let material_right = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.6, 0.2) });
+    let material_left = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.3 });
+    let material_right = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.6, 0.2), fuzz: 1.0 });
 
     let world = vec![
         Object {
