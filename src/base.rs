@@ -46,7 +46,7 @@ pub struct HitRecord {
 
 impl HitRecord {
     pub fn new(ray: &Ray, p: Point3, t: f64, normal: Vec3) -> HitRecord {
-        let front_face = dot(&ray.direction, &normal) < 0.0;
+        let front_face = dot(ray.direction, normal) < 0.0;
         let normal = if !front_face { normal * -1.0 } else { normal };
         HitRecord {
             p,

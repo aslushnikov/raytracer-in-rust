@@ -13,8 +13,8 @@ use self::shapes::*;
 use self::camera::*;
 
 type GenericResult<T> = Result<T, Box<dyn std::error::Error>>;
-const SAMPLES_PER_PIXEL: u32 = 10;
-const MAX_RAY_REFLECTION: usize = 10;
+const SAMPLES_PER_PIXEL: u32 = 50;
+const MAX_RAY_REFLECTION: usize = 50;
 
 pub fn hit_list<'a>(ray: &Ray, objects: impl Iterator<Item = &'a Object>, t_min: f64, t_max: f64) -> Option<(&'a Object, HitRecord)> {
     let mut hit_record = None;
@@ -40,7 +40,7 @@ fn ray_color(ray: &Ray, world: &Vec<Object>, depth: usize) -> Color {
         },
         Some((object, hit_record)) => {
             if let Some((child_ray, attenuation)) = object.material.scatter(&ray, &hit_record) {
-                return vec3::hadamard(&attenuation, &ray_color(&child_ray, world, depth - 1));
+                return vec3::hadamard(attenuation, ray_color(&child_ray, world, depth - 1));
             }
             return Color::new(0.0, 0.0, 0.0);
         }
@@ -53,40 +53,41 @@ fn main() -> GenericResult<()> {
     let image_width: u32 = 400;
     let image_height: u32 = (image_width as f64 / aspect_ratio) as u32;
 
-    // World
-    let material_ground = Box::new(LambertianMaterial { albedo: Color::new(0.8, 0.8, 0.0) });
-    let material_center = Box::new(LambertianMaterial { albedo: Color::new(0.7, 0.3, 0.3) });
-    let material_left = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.8, 0.8), fuzz: 0.3 });
-    let material_right = Box::new(MetalMaterial { albedo: Color::new(0.8, 0.6, 0.2), fuzz: 1.0 });
-
     let world = vec![
         Object {
             geometry: Box::new(Sphere {
                 center: Point3::new(0.0, -100.5, -1.0),
                 radius: 100.0,
             }),
-            material: material_ground,
+            material: Box::new(LambertianMaterial { albedo: Color::new(0.8, 0.8, 0.0) }),
         },
         Object {
             geometry: Box::new(Sphere {
                 center: Point3::new(0.0, 0.0, -1.0),
                 radius: 0.5,
             }),
-            material: material_center,
+            material: Box::new(LambertianMaterial { albedo: Color::new(0.1, 0.2, 0.5) }),
         },
         Object {
             geometry: Box::new(Sphere {
                 center: Point3::new(-1.0, 0.0, -1.0),
                 radius: 0.5,
             }),
-            material: material_left,
+            material: Box::new(DielectricMaterial { ir: 1.5 }),
+        },
+        Object {
+            geometry: Box::new(Sphere {
+                center: Point3::new(-1.0, 0.0, -1.0),
+                radius: -0.4,
+            }),
+            material: Box::new(DielectricMaterial { ir: 1.5 }),
         },
         Object {
             geometry: Box::new(Sphere {
                 center: Point3::new(1.0, 0.0, -1.0),
                 radius: 0.5,
             }),
-            material: material_right,
+            material: Box::new(MetalMaterial { albedo: Color::new(0.8, 0.6, 0.2), fuzz: 0.0 }),
         },
     ];
 
