@@ -24,8 +24,17 @@ impl Ray {
     }
 }
 
-pub trait Hittable {
+pub trait Geometry {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+}
+
+pub trait Material {
+    fn scatter(&self, hit_record: &HitRecord) -> Ray;
+}
+
+pub struct Object<G: Geometry, M: Material> {
+    pub geometry: G,
+    pub material: M,
 }
 
 pub struct HitRecord {
