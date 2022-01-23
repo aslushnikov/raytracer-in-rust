@@ -1,6 +1,5 @@
 use image::{RgbImage};
 use indicatif::ProgressBar;
-use rand::prelude::*;
 use rayon::prelude::*;
 
 mod base;
@@ -40,8 +39,10 @@ fn ray_color<G: Geometry, M: Material>(ray: &Ray, world: &Vec<Object<G, M>>, dep
             (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
         },
         Some((object, hit_record)) => {
-            let child_ray = object.material.scatter(&hit_record);
-            return 0.5 * ray_color::<G, M>(&child_ray, world, depth - 1);
+            if let Some((child_ray, attenuation)) = object.material.scatter(&ray, &hit_record) {
+                return vec3::hadamard(&attenuation, &ray_color::<G, M>(&child_ray, world, depth - 1));
+            }
+            return Color::new(0.0, 0.0, 0.0);
         }
     }
 }
@@ -53,21 +54,40 @@ fn main() -> GenericResult<()> {
     let image_height: u32 = (image_width as f64 / aspect_ratio) as u32;
 
     // World
+    let material_ground = MetalMaterial { albedo: Color::new(0.8, 0.8, 0.0) };
+    let material_center = MetalMaterial { albedo: Color::new(0.7, 0.3, 0.3) };
+    let material_left = MetalMaterial { albedo: Color::new(0.8, 0.8, 0.8) };
+    let material_right = MetalMaterial { albedo: Color::new(0.8, 0.6, 0.2) };
+
     let world = vec![
-        Object {
-            geometry: Sphere {
-                center: Point3::new(0.0, 0.0, -1.0),
-                radius: 0.5,
-            },
-            material: DiffuseMaterial {},
-        },
         Object {
             geometry: Sphere {
                 center: Point3::new(0.0, -100.5, -1.0),
                 radius: 100.0,
             },
-            material: DiffuseMaterial { },
-        }
+            material: material_ground,
+        },
+        Object {
+            geometry: Sphere {
+                center: Point3::new(0.0, 0.0, -1.0),
+                radius: 0.5,
+            },
+            material: material_center,
+        },
+        Object {
+            geometry: Sphere {
+                center: Point3::new(-1.0, 0.0, -1.0),
+                radius: 0.5,
+            },
+            material: material_left,
+        },
+        Object {
+            geometry: Sphere {
+                center: Point3::new(1.0, 0.0, -1.0),
+                radius: 0.5,
+            },
+            material: material_right,
+        },
     ];
 
     // Camera

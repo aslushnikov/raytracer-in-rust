@@ -29,7 +29,7 @@ pub trait Geometry {
 }
 
 pub trait Material {
-    fn scatter(&self, hit_record: &HitRecord) -> Ray;
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)>;
 }
 
 pub struct Object<G: Geometry, M: Material> {

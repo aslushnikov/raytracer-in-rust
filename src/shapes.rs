@@ -31,15 +31,35 @@ impl Geometry for Sphere {
     }
 }
 
-pub struct DiffuseMaterial;
+pub struct LambertianMaterial {
+    pub albedo: Color,
+}
 
-impl Material for DiffuseMaterial {
-    fn scatter(&self, hit_record: &HitRecord) -> Ray {
-        let target = hit_record.p + hit_record.normal + random_in_hemisphere(&hit_record.normal);
-        Ray {
+impl Material for LambertianMaterial {
+    fn scatter(&self, _: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
+        let direction = hit_record.normal + random_in_hemisphere(&hit_record.normal);
+        Some((Ray {
             origin: hit_record.p,
-            direction: target - hit_record.p,
+            direction: direction,
+        }, self.albedo))
+    }
+}
+
+pub struct MetalMaterial {
+    pub albedo: Color,
+}
+
+impl Material for MetalMaterial {
+    fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
+        //TODO probably no need to do unit_vector anywhere here.
+        let direction = unit_vector(ray.direction) - 2.0 * vec3::dot(&hit_record.normal, &unit_vector(ray.direction)) * hit_record.normal;
+        if vec3::dot(&direction, &hit_record.normal) <= 0.0 {
+            return None
         }
+        Some((Ray {
+            origin: hit_record.p,
+            direction: direction,
+        }, self.albedo))
     }
 }
 
