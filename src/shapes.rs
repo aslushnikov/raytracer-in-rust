@@ -1,6 +1,5 @@
 use super::vec3::{self,*};
-use super::ray::*;
-use super::hittable::*;
+use super::base::*;
 
 pub struct Sphere {
     pub center: Point3,

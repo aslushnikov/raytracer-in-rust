@@ -3,17 +3,13 @@ use indicatif::ProgressBar;
 use rand::prelude::*;
 use rayon::prelude::*;
 
+mod base;
 mod vec3;
-mod ray;
-mod color;
-mod hittable;
 mod shapes;
 mod camera;
 
 use self::vec3::*;
-use self::color::*;
-use self::ray::*;
-use self::hittable::*;
+use self::base::*;
 use self::shapes::*;
 use self::camera::*;
 

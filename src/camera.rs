@@ -1,5 +1,5 @@
 use super::vec3::*;
-use super::ray::*;
+use super::base::*;
 
 pub struct Camera {
     pub origin: Point3,
